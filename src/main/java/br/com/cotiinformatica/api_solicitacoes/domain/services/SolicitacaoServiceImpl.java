@@ -1,4 +1,4 @@
- package br.com.cotiinformatica.api_solicitacoes.domain.services;
+package br.com.cotiinformatica.api_solicitacoes.domain.services;
 
 import br.com.cotiinformatica.api_solicitacoes.domain.dtos.SolicitacaoRequest;
 import br.com.cotiinformatica.api_solicitacoes.domain.dtos.SolicitacaoResponse;
@@ -6,8 +6,10 @@ import br.com.cotiinformatica.api_solicitacoes.domain.enums.PrioridadeSolicitaca
 import br.com.cotiinformatica.api_solicitacoes.domain.enums.StatusSolicitacao;
 import br.com.cotiinformatica.api_solicitacoes.domain.exceptions.RegistroNaoEncontradoException;
 import br.com.cotiinformatica.api_solicitacoes.domain.interfaces.SolicitacaoService;
+import br.com.cotiinformatica.api_solicitacoes.domain.model.Auditoria;
 import br.com.cotiinformatica.api_solicitacoes.domain.model.Solicitacao;
 import br.com.cotiinformatica.api_solicitacoes.infrastructure.components.MessageProducerComponent;
+import br.com.cotiinformatica.api_solicitacoes.infrastructure.repositories.AuditoriaRepository;
 import br.com.cotiinformatica.api_solicitacoes.infrastructure.repositories.SolicitacaoRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -26,6 +28,7 @@ public class SolicitacaoServiceImpl implements SolicitacaoService {
     private final SolicitacaoRepository solicitacaoRepository;
     private final MessageProducerComponent messageProducerComponent;
     private final ObjectMapper objectMapper;
+    private final AuditoriaRepository auditoriaRepository;
 
     @Transactional
     @Override
@@ -45,6 +48,14 @@ public class SolicitacaoServiceImpl implements SolicitacaoService {
         var mensagem = objectMapper.writeValueAsString(solicitacao);
 
         messageProducerComponent.sendMessage(mensagem);
+
+        var auditoria = new Auditoria();
+        auditoria.setId(UUID.randomUUID());
+        auditoria.setDataHora(LocalDateTime.now());
+        auditoria.setSolicitacao(mensagem);
+        auditoria.setOperacao("CADASTRO");
+
+        auditoriaRepository.save(auditoria);
 
         return toResponse(solicitacao);
     }
